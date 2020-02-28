@@ -25,7 +25,7 @@ Wikipedia dump and spits out files that are required for our package. We, howeve
 stored some additional files that are required for this package. As such, we have added this edited edition to our scripts
 folder. To process a Wikipedia dump run the command below in a terminal. We define the `file_size` as one GB, but it can
 be changed based on the user's wishes. We advice users to run the script in the `basic_data` folder. After the script is
-done, the user only needs to copy the respective wikipedia dump (this excludes the wiki id/name mapping, disambiguation pages
+done, the user only needs to copy the respective Wikipedia dump (this excludes the wiki id/name mapping, disambiguation pages
 and redirects) into the `anchor_files` folder. 
 
 ```

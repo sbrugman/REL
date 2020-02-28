@@ -1,11 +1,12 @@
+import html
 from http.server import BaseHTTPRequestHandler
-import torch
 import time
 import json
 
+from flair.models import SequenceTagger
+
 from REL.mention_detection import MentionDetection
 from REL.utils import process_results
-from flair.models import SequenceTagger
 
 GERBIL = "gerbil_doc"
 
@@ -36,6 +37,7 @@ def make_handler(
 
             super().__init__(*args, **kwargs)
 
+        # TODO: lowercase POST
         def do_POST(self):
             """
             Returns response.
@@ -63,7 +65,7 @@ def make_handler(
 
             data = json.loads(post_data.decode("utf-8"))
             text = data["text"]
-            text = text.replace("&amp;", "&")
+            text = html.unescape(text)
             spans = [(int(j["start"]), int(j["length"])) for j in data["spans"]]
             return text, spans
 
@@ -111,8 +113,7 @@ def make_handler(
             efficiency = [str(n_words), str(total_ment), str(time_md), str(time_ed)]
 
             # write to txt file.
-            with open('{}/{}/generated/efficiency.txt'.format(self.base_url, self.wiki_subfolder), 'a',
-                      encoding='utf-8') as f:
+            with (self.base_url / self.wiki_subfolder / "generated/efficiency.txt").open('a', encoding='utf-8') as f:
                 f.write('\t'.join(efficiency) + '\n')
 
             # Process result.

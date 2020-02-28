@@ -1,8 +1,8 @@
 from http.server import HTTPServer
+from pathlib import Path
 
 import flair
 import torch
-
 from flair.models import SequenceTagger
 
 from REL.entity_disambiguation import EntityDisambiguation
@@ -10,22 +10,21 @@ from REL.server import make_handler
 
 flair.device = torch.device('cuda:0')
 
+
 def user_func(text):
     spans = [(0, 5), (17, 7), (50, 6)]
     return spans
 
 
 # 0. Set your project url, which is used as a reference for your datasets etc.
-base_url = ""
+base_url = Path("")
 wiki_subfolder = "wiki_2019"
 
 # 1. Init model, where user can set his/her own config that will overwrite the default config.
 # If mode is equal to 'eval', then the model_path should point to an existing model.
 config = {
     "mode": "eval",
-    "model_path": "{}/{}/generated/model".format(
-        base_url, wiki_subfolder
-    ),
+    "model_path": base_url / wiki_subfolder / "generated" / "model",
 }
 
 model = EntityDisambiguation(base_url, wiki_subfolder, config)
@@ -38,12 +37,12 @@ tagger_ner = SequenceTagger.load("ner-fast")
 # tagger_ner = user_func
 
 # 3. Init server.
-MODE = "EL"
+mode = "EL"
 server_address = ("localhost", 5555)
 server = HTTPServer(
     server_address,
     make_handler(
-        base_url, wiki_subfolder, model, tagger_ner, mode=MODE, include_conf=True
+        base_url, wiki_subfolder, model, tagger_ner, mode=mode, include_conf=True
     ),
 )
 

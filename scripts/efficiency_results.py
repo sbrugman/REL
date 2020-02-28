@@ -1,13 +1,15 @@
+from pathlib import Path
+
 import numpy as np
 
-base_url = ""
+base_url = Path("")
 
 n_mentions = []
 n_words = []
 time_md = []
 time_ed = []
 
-with open("{}/generated/efficiency_gpu.txt".format(base_url), "r", encoding="utf-8") as f:
+with (base_url / "generated" / "efficiency_gpu.txt").open(encoding="utf-8") as f:
     for line in f:
         splt = line.split()
 

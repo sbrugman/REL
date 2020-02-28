@@ -1,16 +1,17 @@
 import os
 import json
+from pathlib import Path
 from random import shuffle
 import time
 import re
+import logging
 
 import torch
 from torch.autograd import Variable
 import torch.optim as optim
 import numpy as np
+
 from REL.db.generic import GenericLookup
-
-
 from REL.vocabulary import Vocabulary
 from REL.mulrel_ranker import MulRelRanker, PreRank
 import REL.utils as utils
@@ -20,6 +21,7 @@ Parent Entity Disambiguation class that directs the various subclasses used
 for the ED step.
 """
 
+log = logging.getLogger("REL")
 wiki_prefix = "en.wikipedia.org/wiki/"
 
 #
@@ -32,6 +34,9 @@ wiki_prefix = "en.wikipedia.org/wiki/"
 
 class EntityDisambiguation:
     def __init__(self, base_url, wiki_version, user_config, reset_embeddings=False):
+        if isinstance(base_url, str):
+            base_url = Path(base_url)
+
         self.base_url = base_url
         self.wiki_version = wiki_version
         self.embeddings = {}
@@ -44,23 +49,23 @@ class EntityDisambiguation:
 
         self.emb = GenericLookup(
             "entity_word_embedding",
-            "{}/{}/generated/".format(base_url, wiki_version),
+            base_url / wiki_version / "generated",
         )
         test = self.emb.emb(["in"], "embeddings")[0]
         assert test is not None, "Wikipedia embeddings in wrong folder..? Test embedding not found.."
 
-        self.g_emb = GenericLookup("common_drawl", "{}/generic/".format(base_url))
+        self.g_emb = GenericLookup("common_drawl", base_url / "generic")
         test = self.g_emb.emb(["in"], "embeddings")[0]
         assert test is not None, "Glove embeddings in wrong folder..? Test embedding not found.."
 
         self.__load_embeddings()
-        self.coref = TrainingEvaluationDatasets("{}".format(base_url), wiki_version)
+        self.coref = TrainingEvaluationDatasets(base_url, wiki_version)
         self.prerank_model = PreRank(self.config).to(self.device)
 
         self.__max_conf = None
 
         if self.config["mode"] == "eval":
-            print("Loading model from given path: {}".format(self.config["model_path"]))
+            log.info("Loading model from given path: {}".format(self.config["model_path"]))
             self.model = self.__load(self.config["model_path"])
         else:
             if reset_embeddings:
@@ -158,7 +163,7 @@ class EntityDisambiguation:
         for dname, data in org_dev_datasets.items():
             dev_datasets.append((dname, self.get_data_items(data, dname, predict=True)))
 
-        print("Creating optimizer")
+        log.info("Creating optimizer")
         optimizer = optim.Adam(
             [p for p in self.model.parameters() if p.requires_grad],
             lr=self.config["learning_rate"],
@@ -262,7 +267,7 @@ class EntityDisambiguation:
 
                 loss = loss.cpu().data.numpy()
                 total_loss += loss
-                print(
+                log.info(
                     "epoch",
                     e,
                     "%0.2f%%" % (dc / len(train_dataset) * 100),
@@ -270,7 +275,7 @@ class EntityDisambiguation:
                     end="\r",
                 )
 
-            print("epoch", e, "total loss", total_loss, total_loss / len(train_dataset))
+            log.info("epoch", e, "total loss", total_loss, total_loss / len(train_dataset))
 
             if (e + 1) % eval_after_n_epochs == 0:
                 dev_f1 = 0
@@ -279,7 +284,7 @@ class EntityDisambiguation:
                     f1, recall, precision, _ = self.__eval(
                         org_dev_datasets[dname], predictions
                     )
-                    print(
+                    log.info(
                         dname,
                         utils.tokgreen(
                             "Micro F1: {}, Recall: {}, Precision: {}".format(
@@ -300,17 +305,17 @@ class EntityDisambiguation:
                     not_better_count = 0
 
                     self.config["learning_rate"] = 1e-5
-                    print("change learning rate to", self.config["learning_rate"])
+                    log.info("change learning rate to", self.config["learning_rate"])
                     for param_group in optimizer.param_groups:
                         param_group["lr"] = self.config["learning_rate"]
 
                 if dev_f1 < best_f1:
                     not_better_count += 1
-                    print("Not improving", not_better_count)
+                    log.info("Not improving", not_better_count)
                 else:
                     not_better_count = 0
                     best_f1 = dev_f1
-                    print("save model to", self.config["model_path"])
+                    log.info("save model to", self.config["model_path"])
                     self.__save(self.config["model_path"])
 
                 if not_better_count == self.config["n_not_inc"]:
@@ -332,7 +337,7 @@ class EntityDisambiguation:
         for dname, data in dev_datasets:
             predictions = self.__predict(data)
             f1, recall, precision, total_nil = self.__eval(datasets[dname], predictions)
-            print(
+            log.info(
                 dname,
                 utils.tokgreen(
                     "Micro F1: {}, Recall: {}, Precision: {}".format(
@@ -340,8 +345,8 @@ class EntityDisambiguation:
                     )
                 ),
             )
-            print("Total NIL: {}".format(total_nil))
-            print("----------------------------------")
+            log.info("Total NIL: {}".format(total_nil))
+            log.info("----------------------------------")
 
     def predict(self, data):
         """
@@ -483,6 +488,7 @@ class EntityDisambiguation:
             confidence_scores = self.__compute_confidence(scores, pred_ids)
 
             scores = scores.cpu().data.numpy()
+            # Unused?
             ent_scores = ent_scores.cpu().data.numpy()
             pred_ids = np.argmax(scores, axis=1)
 
@@ -615,6 +621,7 @@ class EntityDisambiguation:
                 )
                 token_ids = Variable(torch.LongTensor(token_ids).to(self.device))
 
+                # Unused?
                 entity_names = [m["named_cands"] for m in content]  # named_cands
 
                 log_probs = self.prerank_model.forward(
@@ -681,8 +688,8 @@ class EntityDisambiguation:
 
         # if total > 0
         if dname != "raw":
-            print("Recall for {}: {}".format(dname, has_gold / total))
-            print("-----------------------------------------------")
+            log.info("Recall for {}: {}".format(dname, has_gold / total))
+            log.info("-----------------------------------------------")
         return new_dataset
 
     def __update_embeddings(self, emb_name, embs):

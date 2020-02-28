@@ -18,8 +18,8 @@ field should always be left empty as is.
 ```python
 import requests
 
-IP_ADDRESS = "http://localhost"
-PORT = "5555"
+ip_address = "http://localhost"
+port = "5555"
 text_doc = "If you're going to try, go all the way - Charles Bukowski"
 
 document = {
@@ -27,7 +27,7 @@ document = {
     "spans": [],
 }
 
-API_result = requests.post("{}:{}".format(IP_ADDRESS, PORT), json=document).json()
+api_result = requests.post("{}:{}".format(ip_address, port), json=document).json()
 ```
 
 # Setup package

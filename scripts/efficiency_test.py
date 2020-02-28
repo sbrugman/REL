@@ -1,10 +1,14 @@
+from pathlib import Path
+
 import requests
-from REL.training_datasets import TrainingEvaluationDatasets
 import numpy as np
+
+from REL.training_datasets import TrainingEvaluationDatasets
+
 
 np.random.seed(seed=42)
 
-base_url = ""
+base_url = Path("")
 wiki_version = "wiki_2019"
 datasets = TrainingEvaluationDatasets(base_url, wiki_version).load()['aida_testB']
 
@@ -46,16 +50,17 @@ for i, doc in enumerate(datasets):
 # --------------------- Now total --------------------------------
 # ------------- RUN SEPARATELY TO BALANCE LOAD--------------------
 if not server:
+    from pathlib import Path
+    from time import time
+
     import flair
     import torch
-
     from flair.models import SequenceTagger
 
     from REL.mention_detection import MentionDetection
     from REL.entity_disambiguation import EntityDisambiguation
-    from time import time
 
-    base_url = "C:/Users/mickv/desktop/data_back/"
+    base_url = Path("C:/Users/mickv/desktop/data_back/")
 
     flair.device = torch.device('cuda:0')
 
@@ -71,9 +76,7 @@ if not server:
     # 3. Load model.
     config = {
         "mode": "eval",
-        "model_path": "{}/{}/generated/model".format(
-            base_url, wiki_version
-        ),
+        "model_path": base_url / wiki_version / "generated/model",
     }
     model = EntityDisambiguation(base_url, wiki_version, config)
 

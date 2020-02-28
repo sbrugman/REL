@@ -13,12 +13,14 @@ BRACKETS = {
     "-RSB-": "]",
 }
 
-"""
-Class that creates a Vocabulary object that is used to store references to Embeddings.
-"""
+
+digit_regex = re.compile("[0-9]")
 
 
 class Vocabulary:
+    """
+    Class that creates a Vocabulary object that is used to store references to Embeddings.
+    """
     unk_token = UNK_TOKEN
 
     def __init__(self):
@@ -44,7 +46,7 @@ class Vocabulary:
             token = BRACKETS[token]
         else:
             if digit_0:
-                token = re.sub("[0-9]", "0", token)
+                token = re.sub(digit_regex, "0", token)
 
         if lower:
             return token.lower()

@@ -1,28 +1,37 @@
-from REL.db.base import DB
+from pathlib import Path
+from time import time
+
 from numpy import zeros, float32 as REAL
 import numpy as np
 from gensim import utils
-from time import time
+
+from REL.db.base import DB
+
 
 class GenericLookup(DB):
     def __init__(
-        self,
-        name,
-        save_dir,
-        table_name="embeddings",
-        d_emb=300,
-        columns={"emb": "blob"},
+            self,
+            name,
+            save_dir,
+            table_name="embeddings",
+            d_emb=300,
+            columns=None,
     ):
         """
         Args:
             name: name of the embedding to retrieve.
             d_emb: embedding dimensions.
-            show_progress: whether to print progress.
         """
+        if columns is None:
+            columns = {"emb": "blob"}
+
         self.avg_cnt = {"word": {"cnt": 0, "sum": zeros(d_emb)},
                         "entity": {"cnt": 0, "sum": zeros(d_emb)}}
 
-        path_db = "{}/{}.db".format(save_dir, name)
+        if isinstance(save_dir, str):
+            save_dir = Path(save_dir)
+
+        path_db = (save_dir / name).with_suffix(".db")
 
         self.d_emb = d_emb
         self.name = name
@@ -31,17 +40,15 @@ class GenericLookup(DB):
         )
         self.table_name = table_name
         self.columns = columns
+        self.seen = set()
 
     def emb(self, words, table_name):
-        g = self.lookup(words, table_name)
-        return g
+        return self.lookup(words, table_name)
 
     def wiki(self, mention, table_name, column_name="p_e_m"):
-        g = self.lookup_wik(mention, table_name, column_name)
-        return g
+        return self.lookup_wik(mention, table_name, column_name)
 
     def load_word2emb(self, file_name, batch_size=5000, limit=np.inf, reset=False):
-        self.seen = set()
         if reset:
             self.clear()
 
@@ -65,9 +72,7 @@ class GenericLookup(DB):
                         "unexpected end of input; is count incorrect or file otherwise damaged?"
                     )
 
-                parts = utils.to_unicode(
-                    line.rstrip(), encoding="utf-8", errors="strict"
-                ).split(" ")
+                parts = utils.to_unicode(line.rstrip(), encoding="utf-8").split(" ")
 
                 if len(parts) != vector_size + 1:
                     raise ValueError(
@@ -112,7 +117,6 @@ class GenericLookup(DB):
 
     def load_wiki(self, p_e_m_index, mention_total_freq, batch_size=5000, reset=False):
         if reset:
-
             self.clear()
 
         batch = []
@@ -133,7 +137,9 @@ class GenericLookup(DB):
 
         self.create_index()
 
+
 if __name__ == "__main__":
+    # TODO: remove local path
     save_dir = "C:/Users/mickv/Desktop/data_back/wiki_2019/generated"
 
     # Test data
@@ -159,4 +165,5 @@ if __name__ == "__main__":
 
     # Query
     import torch
+
     embeddings = torch.stack([torch.tensor(e) for e in emb.emb(['in', 'the', 'end'], "embeddings")])

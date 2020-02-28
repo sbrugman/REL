@@ -3,7 +3,6 @@ In this tutorial we will guide you through the process of using our Entity Linki
 that the tutorials are followed in a sequential order, meaning that the variable `base_url` is defined and that you have
 amended the required project structure.
 
-
 ## Setting up  your own API
 Previously we defined our `base_url`. We also need the project to know which specific
 Wikipedia corpus we would like to use. We do this by creating a variable that in this case refers to the folder containing
@@ -11,6 +10,7 @@ the necessary files for our Wikipedia 2014 folder. Additionally, we import the r
  
  ```python
 from http.server import HTTPServer
+
 from flair.models import SequenceTagger
 
 from REL.entity_disambiguation import EntityDisambiguation
@@ -51,14 +51,14 @@ the `EL` mode, even when using their own MD system. We only used the `ED` mode f
 the user may choose to include or exclude confidence scores.
 
 ```python
-MODE = "EL"
-INCLUDE_CONF = True
+mode = "EL"
+include_conf = True
 
 server_address = ("localhost", 5555)
 server = HTTPServer(
     server_address,
     make_handler(
-        base_url, wiki_subfolder, model, tagger_ner, mode=MODE, include_conf=INCLUDE_CONF
+        base_url, wiki_subfolder, model, tagger_ner, mode=mode, include_conf=include_conf
     ),
 )
 
@@ -78,8 +78,8 @@ a single document. We currently added this to make sure that a single user does 
 ```python
 import requests
 
-IP_ADDRESS = "http://localhost"
-PORT = "5555"
+ip_address = "http://localhost"
+port = "5555"
 text_doc = "If you're going to try, go all the way - Charles Bukowski"
 
 document = {
@@ -87,7 +87,7 @@ document = {
     "spans": [],
 }
 
-API_result = requests.post("{}:{}".format(IP_ADDRESS, PORT), json=document).json()
+API_result = requests.post("{}:{}".format(ip_address, port), json=document).json()
 ```
 
 ## Pipeline integration
@@ -116,10 +116,10 @@ def example_preprocessing():
     processed = {"test_doc1": [text, []], "test_doc2": [text, []]}
     return processed
 
-input = example_preprocessing()
+input_documents = example_preprocessing()
 ```
 
-Now that we have defined our `input` we instantiate our mention detection class, NER-tagger and use both to find
+Now that we have defined our `input_documents` we instantiate our mention detection class, NER-tagger and use both to find
 mentions of our dataset. The output of the function `find_mentions()` is a dictionary with various properties that
 are required for the Entity Disambiguation module. Additionally, it returns a count consisting of the total number of
 mentions that were found using the NER-tagger. This number may be unequal to the number of mentions that the dictionary
@@ -128,7 +128,7 @@ mentions that were found using the NER-tagger. This number may be unequal to the
 ```python
 mention_detection = MentionDetection(base_url, wiki_subfolder)
 tagger_ner = SequenceTagger.load("ner-fast")
-mentions_dataset, n_mentions = mention_detection.find_mentions(input, tagger_ner)
+mentions_dataset, n_mentions = mention_detection.find_mentions(input_documents, tagger_ner)
 ```
 
 The final step of our End-to-End process consists of instantiating the model and using it to find entities based
@@ -148,7 +148,7 @@ Optionally users may want to process the results in a predefined format of
 `(start_pos, length, entity, confidence_md, confidence_ed)` per entity found in a given document.
 
 ```python
-result = process_results(mentions_dataset, predictions, input, include_conf=True)
+result = process_results(mentions_dataset, predictions, input_documents, include_conf=True)
 ```
 
 ## Replacing the Mention Detection module
@@ -178,7 +178,7 @@ def example_preprocessing():
     "test_doc2": [text, produce_spans(text)}
     return processed
     
-input = example_preprocessing()
+input_documents = example_preprocessing()
 ```
 
 Once the data is in the format above, we still need to parse it such that it may be used for our EL step. We developed
@@ -187,5 +187,5 @@ to make predictions using the ED step. In this case, the contribution of our pac
 
 ```python
 mention_detection = MentionDetection(base_url, wiki_subfolder)
-mentions_dataset, n_mentions = mention_detection.format_spans(input)
+mentions_dataset, n_mentions = mention_detection.format_spans(input_documents)
 ```

@@ -1,5 +1,6 @@
+import html
+from pathlib import Path
 from xml.etree import ElementTree
-import os
 import pickle
 import re
 
@@ -19,14 +20,17 @@ Inherits overlapping functions from the Mention Detection class.
 
 class GenTrainingTest(MentionDetection):
     def __init__(self, base_url, wiki_version, wikipedia):
-        self.wned_path = "{}/generic/test_datasets/wned-datasets/".format(base_url)
-        self.aida_path = "{}/generic/test_datasets/AIDA/".format(base_url)
+        if isinstance(base_url, str):
+            base_url = Path(base_url)
+
+        self.wned_path = base_url / "generic/test_datasets/wned-datasets"
+        self.aida_path = base_url / "generic/test_datasets/AIDA"
         self.wikipedia = wikipedia
         self.base_url = base_url
         self.wiki_version = wiki_version
         self.wiki_db = GenericLookup(
             "entity_word_embedding",
-            "{}/{}/generated/".format(base_url, wiki_version),
+            base_url / wiki_version / "generated",
         )
         super().__init__(base_url, wiki_version)
 
@@ -77,16 +81,14 @@ class GenTrainingTest(MentionDetection):
         :return: wned dataset with respective ground truth values
         """
         split = "\n"
-        annotations_xml = os.path.join(
-            self.wned_path, "{}/{}.xml".format(dataset, dataset)
-        )
+        annotations_xml = (self.wned_path / dataset / dataset).with_suffix(".xml")
         tree = ElementTree.parse(annotations_xml)
         root = tree.getroot()
 
         contents = {}
         exist_doc_names = []
         for doc in root:
-            doc_name = doc.attrib["docName"].replace("&amp;", "&")
+            doc_name = html.unescape(doc.attrib["docName"])
             if doc_name in exist_doc_names:
                 print(
                     "Duplicate document found, will be removed later in the process: {}".format(
@@ -95,13 +97,12 @@ class GenTrainingTest(MentionDetection):
                 )
                 continue
             exist_doc_names.append(doc_name)
-            doc_path = os.path.join(
-                self.wned_path, "{}/RawText/{}".format(dataset, doc_name)
-            )
-            with open(doc_path, "r", encoding="utf-8") as cf:
+            doc_path = self.wned_path / dataset / "/RawText" / doc_name
+
+            with doc_path.open(encoding="utf-8") as cf:
                 doc_text = " ".join(cf.readlines())
-            cf.close()
-            doc_text = doc_text.replace("&amp;", "&")
+
+            doc_text = html.unescape(doc_text)
             split_text = re.split(r"{}".format(split), doc_text)
 
             cnt_replaced = 0
@@ -109,7 +110,7 @@ class GenTrainingTest(MentionDetection):
             mentions_gt = {}
             total_gt = 0
             for annotation in doc:
-                mention_gt = annotation.find("mention").text.replace("&amp;", "&")
+                mention_gt = html.unescape(annotation.find("mention").text)
                 ent_title = annotation.find("wikiName").text
                 offset = int(annotation.find("offset").text)
 
@@ -194,7 +195,7 @@ class GenTrainingTest(MentionDetection):
         elif dataset == "test":
             dataset = "testa_testb_aggregate_original"
 
-        file_path = "{}{}".format(self.aida_path, dataset)
+        file_path = self.aida_path / dataset
         sentences = {}
 
         sentence = []
@@ -209,7 +210,7 @@ class GenTrainingTest(MentionDetection):
         doc_cnt = 0
         cnt_replaced = 0
 
-        with open(file_path, "r", encoding="utf-8") as f:
+        with file_path.open(encoding="utf-8") as f:
             for line in f:
                 line = line.strip()
 
@@ -341,11 +342,6 @@ class GenTrainingTest(MentionDetection):
         :return: Dictionary with mentions per document.
         """
 
-        with open(
-            "{}/{}/generated/test_train_data/{}.pkl".format(
-                self.base_url, self.wiki_version, file_name
-            ),
-            "wb",
-        ) as f:
+        file_path = (self.base_url / self.wiki_version / "generated" / "test_train_data" / file_name).with_suffix(".pkl")
+        with file_path.open("wb") as f:
             pickle.dump(mentions_dataset, f, protocol=pickle.HIGHEST_PROTOCOL)
-        f.close()

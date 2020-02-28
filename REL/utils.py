@@ -12,7 +12,7 @@ def preprocess_mention(m, wiki_db):
     :return: mention
     """
 
-    # TODO: This can be optimised (less db calls required).
+    # TODO: This can be optimised (fewer db calls required).
     cur_m = modify_uppercase_phrase(m)
     freq_lookup_cur_m = wiki_db.wiki(cur_m, "wiki", "freq")
 
@@ -80,9 +80,9 @@ def process_results(
             else:
                 offset = 0
             start_pos = offset + ment["pos"]
-            end_pos = offset + ment["end_pos"]
             mention_length = int(ment["end_pos"] - ment["pos"])
 
+            # end_pos = offset + ment["end_pos"]
             # self.verify_pos(ment["ngram"], start_pos, end_pos, text)
             if pred["prediction"] != "NIL":
                 if include_conf:
@@ -105,24 +105,11 @@ def trim1(s):
     return s.replace("^%s*(.-)%s*$", "%1")
 
 
-def first_letter_to_uppercase(s):
-    if len(s) < 1:
-        return s
-    if len(s) == 1:
-        return s.upper()
-    return s[0].upper() + s[1:]
-
-
 def modify_uppercase_phrase(s):
     if s == s.upper():
         return s.title()
     else:
         return s
-
-
-# def split_in_words(inputstr):
-#     tokenizer = RegexpTokenizer(r'\w+')
-#     return [unidecode.unidecode(w) for w in tokenizer.tokenize(inputstr)]
 
 
 def split_in_words(inputstr):
@@ -135,7 +122,7 @@ def split_in_words(inputstr):
     tokenizer = RegexpTokenizer(r"\w+")
     return [
         unidecode.unidecode(w) for w in tokenizer.tokenize(inputstr)
-    ]  # #inputstr.split()]#
+    ]
 
 
 def split_in_words_mention(inputstr):
@@ -145,20 +132,7 @@ def split_in_words_mention(inputstr):
     
     Same with U.S.
     """
-    tokenizer = RegexpTokenizer(r"\w+")
-    return [unidecode.unidecode(w) for w in inputstr.split()]  # #inputstr.split()]#
-
-
-# def split_in_words_context(inputstr):
-#     '''
-#     TODO:
-#     This regexp also splits 'AL-NAHAR', which should be a single word
-#     into 'AL' and 'NAHAR', resulting in the inability to find a match.
-
-#     Same with U.S.
-#     '''
-#     tokenizer = RegexpTokenizer(r'\w+')
-#     return [unidecode.unidecode(w) for w in inputstr.split()]# #inputstr.split()]#
+    return [unidecode.unidecode(w) for w in inputstr.split()]
 
 
 def correct_type(args, data):
@@ -199,6 +173,7 @@ def is_important_word(s):
             return False
         float(s)
         return False
+    # TODO: Too broad exception caluse
     except:
         return True
 

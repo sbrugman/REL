@@ -1,6 +1,8 @@
+import html
+from pathlib import Path
 from urllib.parse import unquote
 
-from REL.utils import first_letter_to_uppercase, trim1
+from REL.utils import trim1
 
 """
 Class responsible for loading Wikipedia files. Required when filling sqlite3 database with e.g. p(e|m) index.
@@ -9,7 +11,11 @@ Class responsible for loading Wikipedia files. Required when filling sqlite3 dat
 
 class Wikipedia:
     def __init__(self, base_url, wiki_version):
-        self.base_url = base_url + wiki_version
+        if isinstance(base_url, str):
+            base_url = Path(base_url)
+
+        self.base_url = base_url / wiki_version
+
         # if include_wiki_id_name:
         self.wiki_disambiguation_index = self.generate_wiki_disambiguation_map()
         print("Loaded wiki disambiguation index")
@@ -45,10 +51,9 @@ class Wikipedia:
         """
         ent_name = ent_name.strip()
         ent_name = trim1(ent_name)
-        ent_name = ent_name.replace("&amp;", "&")
-        ent_name = ent_name.replace("&quot;", '"')
+        ent_name = html.unescape(ent_name)
         ent_name = ent_name.replace("_", " ")
-        ent_name = first_letter_to_uppercase(ent_name)
+        ent_name = ent_name.capitalize()
 
         ent_name = self.wiki_redirect_ent_title(ent_name)
         return ent_name
@@ -79,9 +84,9 @@ class Wikipedia:
         :return: Returns wikipedia name
         """
 
-        if ent_name in self.wiki_redirects_index:
+        try:
             return self.wiki_redirects_index[ent_name]
-        else:
+        except IndexError:
             return ent_name
 
     def wiki_redirect_id(self, id):
@@ -91,9 +96,9 @@ class Wikipedia:
         :return: wikipedia Id
         """
 
-        if id in self.wiki_redirects_id_index:
+        try:
             return self.wiki_redirects_id_index[id]
-        else:
+        except IndexError:
             return id
 
     def generate_wiki_disambiguation_map(self):
@@ -103,11 +108,7 @@ class Wikipedia:
         :return: disambiguation index
         """
         wiki_disambiguation_index = {}
-        with open(
-            "{}/basic_data//wiki_disambiguation_pages.txt".format(self.base_url),
-            "r",
-            encoding="utf-8",
-        ) as f:
+        with (self.base_url / "basic_data" / "wiki_disambiguation_pages.txt").open(encoding="utf-8") as f:
             for line in f:
                 line = line.rstrip()
                 parts = line.split("\t")
@@ -122,8 +123,7 @@ class Wikipedia:
         :return: disambiguation index
         """
         wiki_id_name_map = {"ent_name_to_id": {}, "ent_id_to_name": {}}
-        file_name = "{}/basic_data/wiki_name_id_map.txt".format(self.base_url)
-        with open(file_name, "r", encoding="utf-8") as f:
+        with (self.base_url / "basic_data" / "wiki_name_id_map.txt").open(encoding="utf-8") as f:
             for line in f:
                 line = line.rstrip()
                 parts = line.split("\t")
@@ -144,11 +144,7 @@ class Wikipedia:
         """
         wiki_redirects_index = {}
         wiki_redirects_id_index = {}
-        with open(
-            "{}/basic_data/wiki_redirects.txt".format(self.base_url),
-            "r",
-            encoding="utf-8",
-        ) as f:
+        with (self.base_url / "basic_data" / "wiki_redirects.txt").open(encoding="utf-8") as f:
             for line in f:
                 line = line.rstrip()
                 parts = line.split("\t")

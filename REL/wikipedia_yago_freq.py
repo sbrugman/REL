@@ -1,20 +1,23 @@
-import os
+import html
 import re
+from pathlib import Path
 from urllib.parse import unquote
 
 import numpy as np
 
-from REL.utils import trim1, first_letter_to_uppercase, unicode2ascii
+from REL.utils import unicode2ascii
 from REL.db.generic import GenericLookup
-
-"""
-Class responsible for processing Wikipedia dumps. Performs computations to obtain the p(e|m) index and counts 
-overall occurrences of mentions.
-"""
 
 
 class WikipediaYagoFreq:
+    """
+    Class responsible for processing Wikipedia dumps. Performs computations to obtain the p(e|m) index and counts
+    overall occurrences of mentions.
+    """
     def __init__(self, base_url, wiki_version, wikipedia):
+        if isinstance(base_url, str):
+            base_url = Path(base_url)
+
         self.base_url = base_url
         self.wiki_version = wiki_version
         self.wikipedia = wikipedia
@@ -33,7 +36,7 @@ class WikipediaYagoFreq:
 
         wiki_db = GenericLookup(
             "entity_word_embedding",
-            "{}/{}/generated/".format(self.base_url, self.wiki_version),
+            self.base_url / self.wiki_version / "generated",
             table_name="wiki",
             columns={"p_e_m": "blob", "lower": "text", "freq": "INTEGER"},
         )
@@ -80,8 +83,7 @@ class WikipediaYagoFreq:
         Computes p(e|m) index for YAGO and combines this index with the Wikipedia p(e|m) index as reported
         by Ganea et al. in 'Deep Joint Entity Disambiguation with Local Neural Attention'.
 
-        Alternatively, users may specificy their own custom p(e|m) by providing mention/entity counts.
-
+        Alternatively, users may specify their own custom p(e|m) by providing mention/entity counts.
 
         :return:
         """
@@ -125,11 +127,7 @@ class WikipediaYagoFreq:
         num_lines = 0
         print("Calculating Yago occurrences")
         custom_freq = {}
-        with open(
-            "{}/generic/p_e_m_data/aida_means.tsv".format(self.base_url),
-            "r",
-            encoding="utf-8",
-        ) as f:
+        with (self.base_url / "generic" / "p_e_m_data" / "aida_means.tsv").open(encoding="utf-8") as f:
             for line in f:
                 num_lines += 1
 
@@ -142,12 +140,12 @@ class WikipediaYagoFreq:
                 mention = parts[0][1:-1].strip()
 
                 ent_name = parts[1].strip()
-                ent_name = ent_name.replace("&amp;", "&")
-                ent_name = ent_name.replace("&quot;", '"')
+                ent_name = html.unescape(ent_name)
 
                 x = ent_name.find("\\u")
                 while x != -1:
                     code = ent_name[x : x + 6]
+                    # TODO: replace with unidecode
                     replace = unicode2ascii[code]
                     if replace == "%":
                         replace = "%%"
@@ -175,11 +173,9 @@ class WikipediaYagoFreq:
         print("Updating counts by merging with CrossWiki")
 
         cnt = 0
-        crosswiki_path = "{}/generic/p_e_m_data/crosswikis_p_e_m.txt".format(
-            self.base_url
-        )
+        crosswiki_path = self.base_url / "generic/p_e_m_data/crosswikis_p_e_m.txt"
 
-        with open(crosswiki_path, "r", encoding="utf-8") as f:
+        with crosswiki_path.open(encoding="utf-8") as f:
             for line in f:
                 parts = line.split("\t")
                 mention = unquote(parts[0])
@@ -239,14 +235,9 @@ class WikipediaYagoFreq:
         last_processed_id = -1
         exist_id_found = False
 
-        wiki_anchor_files = os.listdir(
-            "{}/{}/basic_data/anchor_files/".format(self.base_url, self.wiki_version)
-        )
-        for wiki_anchor in wiki_anchor_files:
-            wiki_file = "{}/{}/basic_data/anchor_files/{}".format(
-                self.base_url, self.wiki_version, wiki_anchor
-            )
-            with open(wiki_file, "r", encoding="utf-8") as f:
+        wiki_anchor_files = self.base_url / self.wiki_version / "basic_data/anchor_files/"
+        for wiki_file in wiki_anchor_files.glob('*'):
+            with wiki_file.open(encoding="utf-8") as f:
                 for line in f:
                     num_lines += 1
 
@@ -360,10 +351,9 @@ class WikipediaYagoFreq:
     # def __preprocess_ent_name(self, ent_name):
     #     ent_name = ent_name.strip()
     #     ent_name = trim1(ent_name)
-    #     ent_name = ent_name.replace("&amp;", "&")
-    #     ent_name = ent_name.replace("&quot;", '"')
+    #     ent_name = html.unescape(ent_name)
     #     ent_name = ent_name.replace("_", " ")
-    #     ent_name = first_letter_to_uppercase(ent_name)
+    #     ent_name = ent_name.capitalize()
     #
     #     ent_name = self.wikipedia.wiki_redirect_ent_title(ent_name)
     #     return ent_name

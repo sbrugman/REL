@@ -1,7 +1,9 @@
+from pathlib import Path
+
 from REL.wikipedia import Wikipedia
 from REL.wikipedia_yago_freq import WikipediaYagoFreq
 
-base_url = ""
+base_url = Path("")
 wiki_version = "wiki_2019"
 
 # 1. Import helper functions; store p(e|m) index etc in class.

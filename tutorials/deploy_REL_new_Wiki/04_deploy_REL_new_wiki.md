@@ -1,5 +1,5 @@
 # Deploy REL for a new Wikipedia corpus
-Although we will do our best to continuously provide the community with recent corpuses, it may be the case that a user wants to, for example, use
+Although we will do our best to continuously provide the community with recent corpora, it may be the case that a user wants to, for example, use
 an older corpus for a specific evaluation. For this reason we provide the user with the option to do so. We must, however,
 note that some steps are outside the scope of the REL package, which makes support for some of these steps a difficult task.
 

@@ -5,6 +5,7 @@ import logging
 from array import array
 import json
 
+
 class DB:
     @staticmethod
     def download_file(url, local_filename):
@@ -19,7 +20,9 @@ class DB:
         r = requests.get(url, stream=True, verify=False)
         if path.dirname(local_filename) and not path.isdir(path.dirname(local_filename)):
             raise Exception(local_filename)
-            makedirs(path.dirname(local_filename))
+
+        makedirs(path.dirname(local_filename), exist_ok=True)
+
         with open(local_filename, 'wb') as f:
             for chunk in r.iter_content(chunk_size=1024):
                 if chunk:
@@ -180,7 +183,6 @@ class DB:
         res = e if e is None else self.binary_to_dict(e[0]) if column == "p_e_m" else e[0]
 
         return res
-
 
     def ensure_file(self, name, url=None, logger=logging.getLogger()):
         """

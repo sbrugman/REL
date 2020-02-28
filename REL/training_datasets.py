@@ -1,5 +1,5 @@
 import pickle
-
+from pathlib import Path
 
 """
 Class responsible for loading training/evaluation datasets for local ED.
@@ -12,10 +12,12 @@ class TrainingEvaluationDatasets:
     """
 
     def __init__(self, base_url, wiki_version):
-        self.person_names = self.__load_person_names(
-            "{}/generic/p_e_m_data/persons.txt".format(base_url)
-        )
-        self.base_url = base_url + wiki_version
+        if isinstance(base_url, str):
+            base_url = Path(base_url)
+
+        # TODO: add / wiki version here?
+        self.person_names = self.__load_person_names(base_url / "generic/p_e_m_data/persons.txt")
+        self.base_url = base_url / wiki_version
 
     def load(self):
         """
@@ -37,7 +39,7 @@ class TrainingEvaluationDatasets:
 
             print("Loading {}".format(ds))
             datasets[ds] = self.__read_pickle_file(
-                "{}/generated/test_train_data/{}.pkl".format(self.base_url, ds)
+                (self.base_url / "generated/test_train_data" / ds).with_suffix(".pkl")
             )
 
             if ds == "wned-wikipedia":
@@ -56,7 +58,7 @@ class TrainingEvaluationDatasets:
 
         :return: Dataset
         """
-        with open(path, "rb") as f:
+        with path.open("rb") as f:
             data = pickle.load(f)
 
         return data
@@ -69,7 +71,7 @@ class TrainingEvaluationDatasets:
         """
 
         data = []
-        with open(path, "r", encoding="utf8") as f:
+        with path.open(encoding="utf8") as f:
             for line in f:
                 data.append(line.strip().replace(" ", "_"))
         return set(data)

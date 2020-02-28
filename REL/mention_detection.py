@@ -1,22 +1,26 @@
-from REL.utils import preprocess_mention, split_in_words
+from pathlib import Path
 
-from REL.db.generic import GenericLookup
 from segtok.segmenter import split_single
 from flair.data import Sentence
 
-"""
-Class responsible for mention detection. 
-"""
+from REL.utils import preprocess_mention, split_in_words
+from REL.db.generic import GenericLookup
 
 
 class MentionDetection:
+    """
+    Class responsible for mention detection.
+    """
     def __init__(self, base_url, wiki_subfolder):
+        if isinstance(base_url, str):
+            base_url = Path(base_url)
+
         self.cnt_exact = 0
         self.cnt_partial = 0
         self.cnt_total = 0
         self.wiki_db = GenericLookup(
             "entity_word_embedding",
-            "{}/{}/generated/".format(base_url, wiki_subfolder),
+            base_url / wiki_subfolder / "generated",
         )
 
     # def __verify_pos(self, ngram, start, end, sentence):
@@ -92,17 +96,19 @@ class MentionDetection:
 
         return left_ctxt, right_ctxt
 
-    def _get_candidates(self, mention):
+    def _get_candidates(self, mention, top_n=100):
         """
-        Retrieves a maximum of 100 candidates from the sqlite3 database for a given mention.
+        Retrieves a maximum of n candidates from the sqlite3 database for a given mention.
 
+        :param top_n: number of candidates to return
         :return: set of candidates
         """
 
         # Performs extra check for ED.
-        cands = self.wiki_db.wiki(mention, "wiki")
-        if cands:
-            return cands[:100]
+        # TODO: Add `LIMIT n` to the SQL Query to better performance
+        candidates = self.wiki_db.wiki(mention, "wiki")
+        if candidates:
+            return candidates[:top_n]
         else:
             return []
 

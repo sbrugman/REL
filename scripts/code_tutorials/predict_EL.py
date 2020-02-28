@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from flair.models import SequenceTagger
 
 from REL.mention_detection import MentionDetection
@@ -13,29 +15,27 @@ def example_preprocessing():
     return processed
 
 
-base_url = ""
+base_url = Path("")
 wiki_subfolder = "wiki_2019"
 
 # 1. Input sentences when using Flair.
-input = example_preprocessing()
+input_documents = example_preprocessing()
 
 # For Mention detection two options.
 # 2. Mention detection, we used the NER tagger, user can also use his/her own mention detection module.
 mention_detection = MentionDetection(base_url, wiki_subfolder)
 
 # If you want to use your own MD system, the required input is: {doc_name: [text, spans] ... }.
-mentions_dataset, n_mentions = mention_detection.format_spans(input)
+mentions_dataset, n_mentions = mention_detection.format_spans(input_documents)
 
 # Alternatively use Flair NER tagger.
 tagger_ner = SequenceTagger.load("ner-fast")
-mentions_dataset, n_mentions = mention_detection.find_mentions(input, tagger_ner)
+mentions_dataset, n_mentions = mention_detection.find_mentions(input_documents, tagger_ner)
 
 # 3. Load model.
 config = {
     "mode": "eval",
-    "model_path": "{}/{}/generated/model".format(
-        base_url, wiki_subfolder
-    ),
+    "model_path": base_url / wiki_subfolder / "generated" / "model",
 }
 model = EntityDisambiguation(base_url, wiki_subfolder, config)
 
@@ -43,6 +43,6 @@ model = EntityDisambiguation(base_url, wiki_subfolder, config)
 predictions, timing = model.predict(mentions_dataset)
 
 # 5. Optionally use our function to get results in a usable format.
-result = process_results(mentions_dataset, predictions, input, include_conf=True)
+result = process_results(mentions_dataset, predictions, input_documents, include_conf=True)
 
 print(result)
